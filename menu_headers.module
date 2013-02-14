@@ -81,13 +81,16 @@ function menu_headers_config($something, $somethingElse, $curr_menu) {
   $items = pull_menu_link_titles($menu);
   foreach($items as $item) {
   	$id = $item['id'];
-    if($defaults[$id]->header != null) {
+    if($defaults && array_key_exists($id, $defaults) && $defaults[$id]->header != null) {
       $collapsed = FALSE;
+      $header_default = $defaults[$id]->header;
+      $size_default = $defaults[$id]->size;
     } else {
       $collapsed = TRUE;
+      $header_default = '';
+      $size_default = 3;
     }
   	$form[$id] = array(
-  		'#tree' => TRUE,
   		'#group' => TRUE,
   		'#type' => 'fieldset',
   		'#title' => t($item['title']),
@@ -96,16 +99,27 @@ function menu_headers_config($something, $somethingElse, $curr_menu) {
   	);
   	$form[$id][$id] = array(
   		'#type' => 'textfield',
-  		'#title' => 'Menu Header',
-      '#default_value' => $defaults[$id]->header,
+  		'#title' => t('Menu Header'),
+      '#default_value' => $header_default,
   	);
-    /*$form[$id][$id . '_size'] = array(
+    $form[$id][$id . '_font_size'] = array(
       '#type' => 'select',
-      '#title' => 'Header Size',
-      '#options' => array(1=>'h1',2=>'h2',3=>'h3',4=>'h4',5=>'h5'),
-      '#default_value' => intval($defaults[$id]->size),
-    );*/
+      '#title' => t('Header Size'),
+      '#options' => array(
+        1 => 'h1',
+        2 => 'h2',
+        3 => 'h3',
+        4 => 'h4',
+        5 => 'h5'
+      ),
+      '#default_value' => $size_default,
+      '#weight' => 0,
+    );
   }
+  $form['menu_name'] = array(
+    '#type' => 'hidden',
+    '#value' => $curr_menu,
+  );
   $form['submit'] = array(
   	'#type' => 'submit',
   	'#value' => t('Save Headings'),
@@ -122,13 +136,26 @@ function menu_headers_set_titles($form, &$form_state) {
 		'form_build_id',
 		'form_token',
 		'form_id',
-		'op');
+		'op',
+    'menu_name',
+  );
+  $font_size = '';
 	foreach($form_state['values'] as $key=>$f) {
 		if(!in_array($key, $submit_values)) {
+          $font_size = $key . '_font_size';
+          $submit_values[] = $font_size;
+      $exists = db_query('SELECT 1 FROM {menu_headers} WHERE mlid = :mlid', array(':mlid' => $key))->fetchField();
 			$record = array(
 				'mlid' => $key,
-				'header' => $f[$key]);
-			drupal_write_record('menu_headers', $record, 'mlid');
+				'header' => $f,
+        'size' => $form_state['values'][$font_size],
+        'menu_name' => $form_state['values']['menu_name'],
+      );
+      if($exists) {
+        drupal_write_record('menu_headers', $record, 'mlid');
+      } else {
+        drupal_write_record('menu_headers', $record);
+      }
 		}
 	}
 }

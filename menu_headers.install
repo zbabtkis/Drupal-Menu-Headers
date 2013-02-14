@@ -29,6 +29,13 @@ function menu_headers_schema() {
 				'not null' => TRUE,
 				'default' => 3,
 			),
+			'menu_name' => array(
+				'description' => 'holds name of the menu that contains this item',
+				'type' => 'varchar',
+				'length' => 255,
+				'not null' => TRUE,
+				'default' => 'main-menu'
+			),
 		),
 		'primary key' => array('mlid'),
 	);

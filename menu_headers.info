@@ -3,3 +3,5 @@ description = Adds administration layer to Menu module, allowing administrators 
 core = 7.x
 version = 7.x-1.0
 config = admin/config/menu-headers
+
+stylesheets[all][] = css/menu_headers.css
