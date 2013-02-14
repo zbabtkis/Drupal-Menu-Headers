@@ -1,0 +1,36 @@
+<?php
+
+/**
+ *
+ * @file
+ *  Sets up DB table for saving and retrieving menu headers 
+ *
+ */
+
+function menu_headers_schema() {
+	$schema = array();
+	$schema['menu_headers'] = array(
+		'description holds menu headers',
+		'fields' => array(
+			'mlid' => array(
+				'description' => 'holds mlid of the menu item',
+				'type' => 'varchar',
+				'length' => 255,
+			),
+			'header' => array(
+				'description' => 'holds header text for menu of same mlid',
+				'type' => 'varchar',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+			'size' => array(
+				'description' => 'holds header font size',
+				'type' => 'int',
+				'not null' => TRUE,
+				'default' => 3,
+			),
+		),
+		'primary key' => array('mlid'),
+	);
+	return $schema;
+}

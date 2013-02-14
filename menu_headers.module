@@ -1,0 +1,134 @@
+<?php
+/**
+ * @file
+ * Adds user interface for creating headers for menu item groups
+ */
+
+function menu_headers_page_alter() {
+  $headers = menu_headers_get_headers();
+  drupal_add_js(array('menu_headers'=>$headers),'setting');
+  drupal_add_js(drupal_get_path('module','menu_headers') . '/js/menu_headers_form.js');
+}
+
+/** 
+ * Implements hook_menu().
+ * creates configuration menu for module.
+ */
+function menu_headers_menu() {
+	$items = array();
+	$items['admin/structure/menu/headers/%'] = array(
+		'title' => 'Edit menu item headers',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('menu_headers_config', 4),
+		'access arguments' => array('administer nodes'),
+		'type' => MENU_NORMAL_ITEM);
+	return($items);
+}
+/** 
+ * Implements hook_menu_local_tasks_alter().
+ * Adds action link to menu configuration page.
+ */
+function menu_headers_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+  switch($root_path) {
+    case 'admin/structure/menu/manage/%':
+      $menu = arg(4);
+      $header_config = menu_get_item('admin/structure/menu/headers/' . $menu);
+      if($header_config['access']) {
+        $data['actions']['output'][] = array(
+          '#theme' => 'menu_local_action',
+          '#link' => $header_config,
+        );
+      }
+    default:
+      break;
+  }
+}
+/**
+ * Recursively pulls all menu link from menu.
+ */
+function pull_menu_link_titles($menu) {
+	$items = array();
+	foreach($menu as $item) {
+		$items[] = array(
+			'title' => $item['link']['title'], 
+			'id' => $item['link']['mlid']);
+		if($item['link']['has_children'] != 0) {
+			$new = pull_menu_link_titles($item['below']);
+			$items = array_merge($items, $new);
+		}
+	}
+	return($items);
+}
+
+function menu_headers_get_headers() {
+  $db_headers = db_select('menu_headers', 'h')
+    ->fields('h',array('mlid', 'header','size'))
+    ->execute();
+  $headers = array();
+  foreach($db_headers as $header) {
+    $headers[$header->mlid] = $header;
+  }
+  return $headers;
+}
+
+/**
+ * Callback function from hook_menu that builds form for editing menu headers.
+ */
+function menu_headers_config($something, $somethingElse, $curr_menu) {
+  $menu = menu_tree_all_data($curr_menu);
+  // Pulls current header values from db.
+  $defaults = menu_headers_get_headers();
+  $items = pull_menu_link_titles($menu);
+  foreach($items as $item) {
+  	$id = $item['id'];
+    if($defaults[$id]->header != null) {
+      $collapsed = FALSE;
+    } else {
+      $collapsed = TRUE;
+    }
+  	$form[$id] = array(
+  		'#tree' => TRUE,
+  		'#group' => TRUE,
+  		'#type' => 'fieldset',
+  		'#title' => t($item['title']),
+  		'#collapsible' => TRUE,
+  		'#collapsed' => $collapsed,
+  	);
+  	$form[$id][$id] = array(
+  		'#type' => 'textfield',
+  		'#title' => 'Menu Header',
+      '#default_value' => $defaults[$id]->header,
+  	);
+    /*$form[$id][$id . '_size'] = array(
+      '#type' => 'select',
+      '#title' => 'Header Size',
+      '#options' => array(1=>'h1',2=>'h2',3=>'h3',4=>'h4',5=>'h5'),
+      '#default_value' => intval($defaults[$id]->size),
+    );*/
+  }
+  $form['submit'] = array(
+  	'#type' => 'submit',
+  	'#value' => t('Save Headings'),
+  	'#submit' => array('menu_headers_set_titles'),
+  );
+  return($form);
+}
+/**
+ * Handler for menu_headers_config form.
+ */
+function menu_headers_set_titles($form, &$form_state) {
+	$submit_values = array(
+		'submit',
+		'form_build_id',
+		'form_token',
+		'form_id',
+		'op');
+	foreach($form_state['values'] as $key=>$f) {
+		if(!in_array($key, $submit_values)) {
+			$record = array(
+				'mlid' => $key,
+				'header' => $f[$key]);
+			drupal_write_record('menu_headers', $record, 'mlid');
+		}
+	}
+}

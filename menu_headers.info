@@ -1,0 +1,5 @@
+name = Menu Headers
+description = Adds administration layer to Menu module, allowing administrators to group menu items with a header
+core = 7.x
+version = 7.x-1.0
+config = admin/config/menu-headers
